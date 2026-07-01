@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pgxrx"
+version = "0.1.0"
+description = "Pharmacogenomics prescription decision tool: VCF to CPIC-guideline dosing recommendations"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+authors = [
+    {name = "PGxRx Contributors"},
+]
+keywords = ["pharmacogenomics", "cpic", "pharmvar", "genomics", "clinical", "vcf", "dosing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Healthcare Information",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0",
+    "pydantic>=2.0",
+    "pysam>=0.22",
+    "cyvcf2>=0.30",
+    "polars>=0.20",
+    "tabulate>=0.9",
+    "jinja2>=3.1",
+    "python-dateutil>=2.8",
+    "click>=8.1",
+    "httpx>=0.25",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-mock>=3.11",
+    "black>=23.0",
+    "ruff>=0.1",
+    "mypy>=1.5",
+]
+api = [
+    "fastapi>=0.104",
+    "uvicorn[standard]>=0.24",
+    "pydantic[email]>=2.0",
+]
+report = [
+    "weasyprint>=60.0",
+]
+all = [
+    "pgxrx[dev,api,report]",
+]
+
+[project.scripts]
+pgxrx = "pgxrx.cli:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pgxrx*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]

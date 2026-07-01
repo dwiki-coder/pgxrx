@@ -1,0 +1,2 @@
+[console_scripts]
+pgxrx = pgxrx.cli:cli

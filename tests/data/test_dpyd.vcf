@@ -1,0 +1,5 @@
+##fileformat=VCFv4.2
+##contig=<ID=chr1,length=248956422>
+##INFO=<ID=GENE,Number=1,Type=String,Description="Associated PGx gene">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE001
+chr1	69873953	A	T	91.0	PASS	GENE=DPYD	GT	0/1
