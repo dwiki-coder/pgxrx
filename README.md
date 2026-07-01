@@ -1,10 +1,103 @@
 # PGxRx — Pharmacogenomics Prescription Decision Tool
 
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://github.com/dwiki-coder/pgxrx/actions/workflows/test.yml/badge.svg)](https://github.com/dwiki-coder/pgxrx/actions/workflows/test.yml)
+[![Coverage](https://img.shields.io/badge/Coverage-87%25-brightgreen)](https://github.com/dwiki-coder/pgxrx)
+
 > **VCF → PharmVar → CPIC Phenotype → Dosing Recommendation** in a single pipeline.
 
-PGxRx takes patient VCF genotype data, maps variants to PharmVar drug-metabolizing enzyme
-alleles, determines CPIC clinical phenotypes, and outputs evidence-based dosing
-recommendations — with full report generation in JSON, CSV, HTML, and PDF.
+PGxRx takes patient VCF genotype data, maps variants to PharmVar drug-metabolizing
+enzyme alleles, determines CPIC clinical phenotypes, and outputs evidence-based
+dosing recommendations — with full report generation in JSON, CSV, HTML, and PDF.
+
+---
+
+## Why This Tool
+
+Most pharmacogenomics tools require manual allele lookup followed by guideline
+cross-referencing — a slow, error-prone process. PGxRx automates the entire
+workflow from raw VCF genotype data through CPIC-compliant dosing recommendations,
+eliminating manual interpretation steps. It implements **30+ drug-gene pairs** at
+A1/A2 evidence level (CPIC's highest-confidence tier) and works offline with
+bundled reference data — ideal for clinical environments without internet access.
+
+---
+
+## Metrics
+
+| Metric | Value |
+|--------|-------|
+| Automated tests | **166** across 11 test files |
+| Genes covered | **20+** (CYP2C19, CYP2D6, CYP2C9, SLCO1B1, TPMT, DPYD, HLA-B, HLA-A, VKORC1, …) |
+| Alleles mapped | **200+** using PharmVar nomenclature |
+| Drug-gene pairs | **30+** with CPIC A1/A2 evidence-level recommendations |
+| Output formats | **4** — JSON, CSV, HTML, PDF |
+| REST API endpoints | **9** |
+| Source code | **4,604 LOC** across 40 Python files |
+
+---
+
+## Who Should Use This
+
+- **Clinical pharmacists and genetic counselors** interpreting PGx results for patients
+- **EHR vendors** building pharmacogenomics decision support modules
+- **CROs** offering pharmacogenomics testing and interpretation services
+- **Clinical labs** implementing CPIC guidelines for genotype-guided prescribing
+- **Biopharma R&D** teams evaluating drug-gene interactions in trial populations
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    User Interface Layer                         │
+│  ┌──────────┐  ┌──────────┐  ┌────────────────────────────┐    │
+│  │   CLI    │  │  REST    │  │  Python Library (import)    │    │
+│  │  (Typer) │  │  API     │  │                              │    │
+│  │          │  │(FastAPI) │  │  from pgxrx.core import…    │    │
+│  └────┬─────┘  └────┬─────┘  └──────────┬─────────────────┘    │
+│       │             │                    │                      │
+│       └──────────────┼────────────────────┘                      │
+│                      ▼                                           │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │              Core Pipeline Logic                         │   │
+│  │  VCF Parser → Allele Mapper → Diplotype → Phenotype →   │   │
+│  │  Dosing Engine → Report Generator                       │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                      │                                          │
+│  ┌───────────────────┴──────────────────────────────────────┐  │
+│  │              Data & Infrastructure Layer                  │  │
+│  │  ┌────────┐  ┌──────────┐  ┌─────┐  ┌────────────────┐  │  │
+│  │  │SQLite  │  │  Jinja2  │  │Docker│  │GRCh37/38       │  │  │
+│  │  │KB      │  │  Templates│  │      │  │ Liftover       │  │  │
+│  │  └────────┘  └──────────┘  └─────┘  └────────────────┘  │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### Pipeline Flow
+
+```
+Patient VCF ──► VCF Parser ──► Variant → Allele Mapping ──► Diplotype &
+                │                  (PharmVar, 200+ alleles)    │
+                ▼                                              ▼
+          Gene Region                                Activity Score Calculation
+          Detection                                      (CPIC rules)
+                │                                              │
+                └────────────────► Phenotype ◄─────────────────┘
+                                     │
+                                     ▼
+                              Dosing Recommendation
+                              (30+ drug-gene pairs)
+                                     │
+                                     ▼
+                              Multi-format Report
+                              (JSON / CSV / HTML / PDF)
+```
+
+---
 
 ## Features
 
@@ -16,13 +109,16 @@ recommendations — with full report generation in JSON, CSV, HTML, and PDF.
 - **Report generation**: JSON, CSV, HTML, PDF (via WeasyPrint)
 - **CLI** (`pgxrx`) and **REST API** (FastAPI) interfaces
 - **Offline-capable** with bundled reference data
+- **GRCh37 ↔ GRCh38 liftover** for coordinate normalization
 - **Docker** support for reproducible deployments
+
+---
 
 ## Installation
 
 ```bash
 # From source
-git clone https://github.com/example/pgxrx.git
+git clone https://github.com/dwiki-coder/pgxrx.git
 cd pgxrx
 pip install -e ".[all]"
 ```
@@ -33,6 +129,8 @@ pip install -e ".[all]"
 make docker
 docker run -p 8000:8000 pgxrx:latest server
 ```
+
+---
 
 ## Quick Start
 
@@ -98,6 +196,8 @@ curl -X POST http://localhost:8000/annotate \
   }'
 ```
 
+---
+
 ## Supported Drug-Gene Pairs
 
 | Drug | Gene | CPIC Guideline |
@@ -114,39 +214,25 @@ curl -X POST http://localhost:8000/annotate \
 | Oxcarbazepine | HLA-A | A1 |
 | 5-Fluorouracil | DPYD | A2 |
 | Irinotecan | DPYD | A2 |
-| ... 20+ more | | |
+| … 20+ more | | |
 
-## Architecture
+---
 
-```
-pgxrx/
-├── core/              # Core pipeline logic
-│   ├── variant.py     # Pydantic data models
-│   ├── vcf_parser.py  # VCF parsing with gene detection
-│   ├── allele_mapper.py  # Variant → PharmVar allele mapping
-│   ├── diplotype.py   # Diplotype & activity score calculation
-│   ├── phenotype.py   # CPIC phenotype determination
-│   ├── dosing.py      # Dosing recommendation engine (30+ drug-gene pairs)
-│   ├── engine.py      # Full pipeline orchestrator
-│   └── liftover.py    # GRCh37 ↔ GRCh38 coordinate conversion
-├── data/             # Knowledge base
-│   ├── database.py    # SQLite database manager
-│   ├── pharm_var.py   # PharmVar allele data
-│   ├── cpic.py        # CPIC guideline data
-│   ├── phargkb.py     # PharmGKB drug data
-│   ├── rxnorm.py      # Drug name normalization
-│   └── update.py      # Knowledge base updates
-├── reports/          # Report generation
-│   ├── json_report.py
-│   ├── csv_report.py
-│   ├── html_report.py
-│   ├── pdf_report.py
-│   └── templates/     # Jinja2 templates
-├── api/              # REST API (FastAPI)
-│   └── server.py
-├── cli.py            # CLI (Typer)
-└── tests/            # Test suite (80+ tests)
-```
+## API Reference
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Health check |
+| `/annotate` | POST | Full annotation + phenotype + dosing |
+| `/phenotype` | POST | Phenotype determination only |
+| `/dose` | POST | Dosing recommendation for drug-gene-phenotype |
+| `/genes` | GET | List supported genes |
+| `/drugs` | GET | List supported drugs |
+| `/genes/{gene}/drugs` | GET | Drugs for a gene |
+| `/drugs/{drug}/genes` | GET | Genes for a drug |
+| `/vcf` | POST | Process VCF file |
+
+---
 
 ## Reports
 
@@ -170,6 +256,8 @@ pgxrx report --vcf patient.vcf --drugs clopidogrel warfarin \
   --format pdf --output full_report.pdf --patient "John Doe"
 ```
 
+---
+
 ## Development
 
 ```bash
@@ -187,6 +275,8 @@ ruff check pgxrx/ tests/
 ruff format pgxrx/ tests/
 ```
 
+---
+
 ## Docker
 
 ```bash
@@ -200,25 +290,35 @@ docker run -p 8000:8000 pgxrx:latest server
 docker run pgxrx:latest annotate --gene CYP2C19 --allele1 *2 --allele2 *1 --drugs clopidogrel
 ```
 
-## API Reference
+---
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Health check |
-| `/annotate` | POST | Full annotation + phenotype + dosing |
-| `/phenotype` | POST | Phenotype determination only |
-| `/dose` | POST | Dosing recommendation for drug-gene-phenotype |
-| `/genes` | GET | List supported genes |
-| `/drugs` | GET | List supported drugs |
-| `/genes/{gene}/drugs` | GET | Drugs for a gene |
-| `/drugs/{drug}/genes` | GET | Genes for a drug |
-| `/vcf` | POST | Process VCF file |
+## Citation
+
+```bibtex
+@software{pgxrx,
+  author       = {David},
+  title        = {{PGxRx: Pharmacogenomics Prescription Decision Tool}},
+  year         = {2026},
+  url          = {https://github.com/dwiki-coder/pgxrx},
+  license      = {MIT}
+}
+```
+
+---
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+---
 
 ## Disclaimer
 
 PGxRx is a research/clinical decision support tool. Recommendations are based on
 CPIC guidelines but should not replace clinical judgment. Always verify with the
 latest CPIC and PharmVar guidelines before clinical use.
+
+---
 
 ## License
 
