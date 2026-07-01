@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pgxrx"
-version = "0.1.0"
+version = "0.1.0.dev1"
 description = "Pharmacogenomics prescription decision tool: VCF to CPIC-guideline dosing recommendations"
 readme = "README.md"
 license = {text = "MIT"}
